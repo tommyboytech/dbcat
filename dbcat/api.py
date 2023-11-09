@@ -20,6 +20,10 @@ from dbcat.migrations import get_alembic_config
 LOGGER = logging.getLogger(__name__)
 
 
+class IntegrityError(Exception):
+    ...
+
+
 class OutputFormat(str, Enum):
     tabular = "tabular"
     json = "json"
@@ -315,14 +319,19 @@ def import_from_object_stream(catalog: Catalog, stream: Sequence[dict]):
             LOGGER.error("cannot import item %d", i)
             LOGGER.error("contents: %s", json.dumps(obj))
             for e in errors:
-                LOGGER.error("validation error: ", str(e))
-            raise sqlalchemy.exc.IntegrityError("import item {} as errors".format(i))
+                LOGGER.error("validation error: %s", str(e))
+            raise IntegrityError("import item {} as errors".format(i))
         consume_import_obj(catalog, obj)
 
 
 def validate_import_obj(catalog, obj) -> Sequence[str]:
-    return []
+    errors = []
+    if "type" not in obj:
+        errors.append("no 'type' field in object")
+    return errors
 
 
 def consume_import_obj(catalog, obj):
-    pass
+    """Obj is expected to be validated first."""
+    if obj["type"] == "foreign_key":
+        pass
