@@ -1,4 +1,4 @@
 # flake8: noqa
 
 from .catalog import Catalog
-from .models import CatColumn, CatSchema, CatSource, CatTable, ColumnLineage
+from .models import CatColumn, CatForeignKey, CatSchema, CatSource, CatTable, ColumnLineage

@@ -431,3 +431,51 @@ class Task(BaseModel):
     app_name = Column(String)
     status = Column(Integer)
     message = Column(String)
+
+
+class CatForeignKey(BaseModel):
+    __tablename__ = "foreign_keys"
+
+    id = Column(Integer, primary_key=True)
+    source_id = Column(Integer, ForeignKey("columns.id"))
+    target_id = Column(Integer, ForeignKey("columns.id"))
+
+    source = relationship("CatColumn", foreign_keys=source_id, lazy="joined")
+    target = relationship("CatColumn", foreign_keys=target_id, lazy="joined")
+
+    __table_args__ = (
+        UniqueConstraint(
+            "source_id", "target_id", name="unique_lineage"
+        ),
+    )
+
+    @property
+    def fqdn(self):
+        return (
+            self.source.table.schema.source.name,
+            self.source.table.schema.name,
+            self.source.table.name,
+            self.source.name,
+            self.target.table.schema.source.name,
+            self.target.table.schema.name,
+            self.target.table.name,
+            self.target.name,
+        )
+
+    def __repr__(self):
+        return "<Source: ({}, {}, {}, {}) -> Target: ({}, {}, {}, {})>".format(
+            self.source.table.schema.source.name,
+            self.source.table.schema.name,
+            self.source.table.name,
+            self.source.name,
+            self.target.table.schema.source.name,
+            self.target.table.schema.name,
+            self.target.table.name,
+            self.target.name,
+        )
+
+    def __eq__(self, other):
+        return self.fqdn == other.fqdn
+
+    def __hash__(self):
+        return hash(self.fqdn)
