@@ -365,4 +365,4 @@ def import_from_stdin():
     )
     with closing(catalog):
         with catalog.managed_session:
-            import_from_object_stream(ijson.items(sys.stdin, prefix=""))
+            import_from_object_stream(catalog, ijson.items(sys.stdin, prefix=""))

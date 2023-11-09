@@ -1,8 +1,11 @@
+import json
 import logging
+import sys
 from enum import Enum
 from pathlib import Path
 from typing import List, Optional, Sequence
 
+import sqlalchemy
 import yaml
 from alembic import command
 from sqlalchemy.orm.exc import NoResultFound
@@ -296,11 +299,30 @@ def add_oracle_source(
         )
 
 
-def import_from_object_stream(stream: Sequence[dict]):
+def import_from_object_stream(catalog: Catalog, stream: Sequence[dict]):
     """Import an object stream.
 
     Each item in stream is a dictionary. Each dictionary represents an element
     in the catalog. Items must be import after all of their dependencies.
 
     """
+    for i, obj in enumerate(stream):
+        # Validate object
+        # if not validated, output failures, and stop
+        # Import item
+        errors = validate_import_obj(catalog, obj)
+        if errors:
+            LOGGER.error("cannot import item %d", i)
+            LOGGER.error("contents: %s", json.dumps(obj))
+            for e in errors:
+                LOGGER.error("validation error: ", str(e))
+            raise sqlalchemy.exc.IntegrityError("import item {} as errors".format(i))
+        consume_import_obj(catalog, obj)
+
+
+def validate_import_obj(catalog, obj) -> Sequence[str]:
+    return []
+
+
+def consume_import_obj(catalog, obj):
     pass
