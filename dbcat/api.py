@@ -1,7 +1,7 @@
 import logging
 from enum import Enum
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Sequence
 
 import yaml
 from alembic import command
@@ -257,6 +257,7 @@ def add_athena_source(
             source_type="athena",
         )
 
+
 def add_bigquery_source(
     catalog: Catalog,
     name: str,
@@ -272,6 +273,7 @@ def add_bigquery_source(
                 key_path=key_path,
                 source_type="bigquery",
             )
+
 
 def add_oracle_source(
     catalog: Catalog,
@@ -292,3 +294,13 @@ def add_oracle_source(
             port=port,
             source_type="oracle",
         )
+
+
+def import_from_object_stream(stream: Sequence[dict]):
+    """Import an object stream.
+
+    Each item in stream is a dictionary. Each dictionary represents an element
+    in the catalog. Items must be import after all of their dependencies.
+
+    """
+    pass
