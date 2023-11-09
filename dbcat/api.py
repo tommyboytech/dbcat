@@ -330,7 +330,29 @@ def validate_import_obj(catalog, obj) -> Sequence[str]:
         errors.append("no 'type' field in object")
         return errors
     if obj["type"] == "foreign_key":
-        pass
+        if "source" not in obj:
+            errors.append("no 'source' field in foreign_key")
+        else:
+            if "database" not in obj["source"]:
+                errors.append("no 'database' field in 'source'")
+            else:
+                ... # check that it exists
+            if "schemata" not in obj["source"]:
+                errors.append("no 'schemata' field in 'source'")
+            else:
+                ... # check that it exists
+            if "table" not in obj["source"]:
+                errors.append("no 'table' field in 'source'")
+            else:
+                ... # check that it exists
+            if "column" not in obj["source"]:
+                errors.append("no 'column' field in 'source'")
+            else:
+                ... # check that it exists
+        if "target" not in obj:
+            errors.append("no 'source' field in foreign_key")
+        else:
+            pass
     else:
         errors.append("unknown type '{}'".format(obj["type"]))
     return errors
