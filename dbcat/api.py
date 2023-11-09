@@ -328,6 +328,11 @@ def validate_import_obj(catalog, obj) -> Sequence[str]:
     errors = []
     if "type" not in obj:
         errors.append("no 'type' field in object")
+        return errors
+    if obj["type"] == "foreign_key":
+        pass
+    else:
+        errors.append("unknown type '{}'".format(obj["type"]))
     return errors
 
 
