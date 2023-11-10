@@ -18,7 +18,7 @@ from dbcat.catalog.models import (
     Job,
     JobExecution,
     JobExecutionStatus,
-    Task,
+    Task, CatForeignKey,
 )
 from dbcat.catalog.pii_types import PiiType
 
@@ -139,6 +139,15 @@ class Catalog(ABC):
             create_method_kwargs={"data_type": data_type, "sort_order": sort_order},
             name=column_name,
             table=table,
+        )
+
+    def add_foreign_key(
+            self, source_column: CatColumn, target_column: CatColumn
+    ) -> CatForeignKey:
+        return self._create(
+            model=CatForeignKey,
+            source=source_column,
+            target=target_column,
         )
 
     def add_job(self, name: str, source: CatSource, context: Dict[Any, Any]) -> Job:

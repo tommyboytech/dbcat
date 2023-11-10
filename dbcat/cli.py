@@ -343,7 +343,6 @@ def add_bigquery(
                     username = username,
                     project_id = project_id,
                     key_path = key_path,
-
                 )
             except sqlalchemy.exc.IntegrityError:
                 typer.echo("Catalog with {} name already exist".format(name))
