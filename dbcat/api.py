@@ -325,15 +325,12 @@ def import_from_object_stream(catalog: Catalog, stream: Sequence[dict]):
 
 
 def validate_import_obj(catalog, obj) -> Sequence[str]:
-    errors = []
     if "type" not in obj:
-        errors.append("no 'type' field in object")
-        return errors
+        return ["no 'type' field in object"]
     if obj["type"] == "foreign-key":
-        _validate_foreign_key(catalog, obj)
+        return _validate_foreign_key(catalog, obj)
     else:
-        errors.append("unknown type '{}'".format(obj["type"]))
-    return errors
+        return ["unknown type '{}'".format(obj["type"])]
 
 
 def _validate_foreign_key(catalog, obj):
