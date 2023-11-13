@@ -329,36 +329,63 @@ def validate_import_obj(catalog, obj) -> Sequence[str]:
     if "type" not in obj:
         errors.append("no 'type' field in object")
         return errors
-    if obj["type"] == "foreign_key":
+    if obj["type"] == "foreign-key":
         if "source" not in obj:
-            errors.append("no 'source' field in foreign_key")
+            errors.append("no 'source' field in foreign-key")
         else:
-            if "database" not in obj["source"]:
-                errors.append("no 'database' field in 'source'")
-            else:
-                ... # check that it exists
-            if "schemata" not in obj["source"]:
-                errors.append("no 'schemata' field in 'source'")
-            else:
-                ... # check that it exists
-            if "table" not in obj["source"]:
-                errors.append("no 'table' field in 'source'")
-            else:
-                ... # check that it exists
-            if "column" not in obj["source"]:
-                errors.append("no 'column' field in 'source'")
-            else:
-                ... # check that it exists
+            errors += _validate_column_stanza(catalog, "source", obj["source"])
         if "target" not in obj:
-            errors.append("no 'source' field in foreign_key")
+            errors.append("no 'target' field in foreign-key")
         else:
-            pass
+            errors += _validate_column_stanza(catalog, "target", obj["target"])
     else:
         errors.append("unknown type '{}'".format(obj["type"]))
     return errors
 
 
+def _validate_column_stanza(catalog, stanza_name, stanza):
+    errors = []
+    if "database" not in stanza:
+        errors.append("no 'database' field in '{}'".format(stanza_name))
+    if "schema" not in stanza:
+        errors.append("no 'schema' field in '{}'".format(stanza_name))
+    if "table" not in stanza:
+        errors.append("no 'table' field in '{}'".format(stanza_name))
+    if "column" not in stanza:
+        errors.append("no 'column' field in '{}'".format(stanza_name))
+    if errors:
+        return errors
+    try:
+        catalog.get_column(
+            stanza["database"],
+            stanza["schema"],
+            stanza["table"],
+            stanza["column"],
+        )
+    except sqlalchemy.orm.exc.NoResultFound as e:
+        errors.append("'{}' column <{}, {}, {}, {}> does not exist".format(
+            stanza_name,
+            stanza["database"],
+            stanza["schema"],
+            stanza["table"],
+            stanza["column"],
+        ))
+    return errors
+
+
 def consume_import_obj(catalog, obj):
     """Obj is expected to be validated first."""
-    if obj["type"] == "foreign_key":
-        pass
+    if obj["type"] == "foreign-key":
+        source_column = catalog.get_column(
+            obj["source"]["database"],
+            obj["source"]["schema"],
+            obj["source"]["table"],
+            obj["source"]["column"],
+        )
+        target_column = catalog.get_column(
+            obj["target"]["database"],
+            obj["target"]["schema"],
+            obj["target"]["table"],
+            obj["target"]["column"],
+        )
+        catalog.add_foreign_key(source_column, target_column)
