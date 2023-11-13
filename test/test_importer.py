@@ -258,7 +258,7 @@ def test_import_foreign_key_succeeds(open_catalog_connection):
         )
 
 
-def test_import_foreign_key_failures(open_catalog_connection, caplog):
+def test_import_schema_failures(open_catalog_connection, caplog):
     test_cases = [
         {
             "data": {
@@ -302,4 +302,64 @@ def test_import_schema_succeeds(open_catalog_connection):
         }])
         assert bool(
             catalog.get_schema("s1", "sc1")
+        )
+
+
+def test_import_table_failures(open_catalog_connection, caplog):
+    test_cases = [
+        {
+            "data": {
+                "type": "table",
+                "schema": "sc1",
+                "table": "t1",
+            },
+            "exc": r"no 'database' field",
+        }, {
+            "data": {
+                "type": "table",
+                "database": "s1",
+                "table": "t1",
+            },
+            "exc": r"no 'schema' field",
+        }, {
+            "data": {
+                "type": "table",
+                "database": "s1",
+                "schema": "sc1",
+            },
+            "exc": r"no 'table' field",
+        }, {
+            "data": {
+                "type": "table",
+                "database": "s1",
+                "schema": "sc1",
+                "table": "t1",
+            },
+            "exc": r"table \<s1, sc1, t1\> is already defined",
+        }
+    ]
+    catalog, conf = open_catalog_connection
+    with catalog.managed_session:
+        s1 = catalog.add_source("s1", "sqlite")
+        sc1 = catalog.add_schema("sc1", s1)
+        catalog.add_table("t1", sc1)
+        for tc in test_cases:
+            with pytest.raises(IntegrityError) as exc:
+                import_from_object_stream(catalog,[tc["data"]])
+            assert re.search(tc["exc"], caplog.text)
+
+
+def test_import_table_succeeds(open_catalog_connection):
+    catalog, conf = open_catalog_connection
+    with catalog.managed_session:
+        s1 = catalog.add_source("s1", "sqlite")
+        catalog.add_schema("sc1", s1)
+        import_from_object_stream(catalog, [{
+            "type": "table",
+            "database": "s1",
+            "schema": "sc1",
+            "table": "t1",
+        }])
+        assert bool(
+            catalog.get_table("s1", "sc1", "t1")
         )
