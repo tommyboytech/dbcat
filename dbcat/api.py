@@ -324,16 +324,18 @@ def import_from_object_stream(catalog: Catalog, stream: Sequence[dict]):
         consume_import_obj(catalog, obj)
 
 
-def validate_import_obj(catalog, obj) -> Sequence[str]:
+def validate_import_obj(catalog: Catalog, obj: dict) -> Sequence[str]:
     if "type" not in obj:
         return ["no 'type' field in object"]
     if obj["type"] == "foreign-key":
         return _validate_foreign_key(catalog, obj)
+    elif obj["type"] == "schema":
+        return _validate_schema(catalog, obj)
     else:
         return ["unknown type '{}'".format(obj["type"])]
 
 
-def _validate_foreign_key(catalog, obj):
+def _validate_foreign_key(catalog: Catalog, obj: dict) -> Sequence[str]:
     errors = []
     if "source" not in obj:
         errors.append("no 'source' field in foreign-key")
@@ -346,7 +348,7 @@ def _validate_foreign_key(catalog, obj):
     return errors
 
 
-def _validate_column_stanza(catalog, stanza_name, stanza):
+def _validate_column_stanza(catalog: Catalog, stanza_name: str, stanza: dict) -> Sequence[str]:
     errors = []
     if "database" not in stanza:
         errors.append("no 'database' field in '{}'".format(stanza_name))
@@ -376,7 +378,22 @@ def _validate_column_stanza(catalog, stanza_name, stanza):
     return errors
 
 
-def consume_import_obj(catalog, obj):
+def _validate_schema(catalog: Catalog, obj: dict) -> Sequence[str]:
+    errors = []
+    if "database" not in obj:
+        errors.append("no 'database' field")
+    if "schema" not in obj:
+        errors.append("no 'schema' field")
+    if errors:
+        return errors
+    try:
+        catalog.get_schema(obj["database"], obj["schema"])
+        return ["schema <{}, {}> is already defined".format(obj["database"], obj["schema"])]
+    except sqlalchemy.orm.exc.NoResultFound:
+        return []
+
+
+def consume_import_obj(catalog: Catalog, obj: dict):
     """Obj is expected to be validated first."""
     if obj["type"] == "foreign-key":
         source_column = catalog.get_column(
@@ -392,3 +409,8 @@ def consume_import_obj(catalog, obj):
             obj["target"]["column"],
         )
         catalog.add_foreign_key(source_column, target_column)
+    elif obj["type"] == "schema":
+        source = catalog.get_source(obj["database"])
+        catalog.add_schema(obj["schema"], source)
+    else:
+        raise ValueError("cannot determine object type")

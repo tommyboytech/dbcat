@@ -256,3 +256,50 @@ def test_import_foreign_key_succeeds(open_catalog_connection):
                 "s1", "sc1", "t2", "t1c1", "s1", "sc1", "t1", "c1"
             )
         )
+
+
+def test_import_foreign_key_failures(open_catalog_connection, caplog):
+    test_cases = [
+        {
+            "data": {
+                "type": "schema",
+                "schema": "sc1",
+            },
+            "exc": r"no 'database' field",
+        }, {
+            "data": {
+                "type": "schema",
+                "database": "s1",
+            },
+            "exc": r"no 'schema' field",
+        }, {
+            "data": {
+                "type": "schema",
+                "database": "s1",
+                "schema": "sc1",
+            },
+            "exc": r"schema \<s1, sc1\> is already defined",
+        }
+    ]
+    catalog, conf = open_catalog_connection
+    with catalog.managed_session:
+        s1 = catalog.add_source("s1", "sqlite")
+        catalog.add_schema("sc1", s1)
+        for tc in test_cases:
+            with pytest.raises(IntegrityError) as exc:
+                import_from_object_stream(catalog,[tc["data"]])
+            assert re.search(tc["exc"], caplog.text)
+
+
+def test_import_schema_succeeds(open_catalog_connection):
+    catalog, conf = open_catalog_connection
+    with catalog.managed_session:
+        catalog.add_source("s1", "sqlite")
+        import_from_object_stream(catalog, [{
+            "type": "schema",
+            "database": "s1",
+            "schema": "sc1",
+        }])
+        assert bool(
+            catalog.get_schema("s1", "sc1")
+        )
