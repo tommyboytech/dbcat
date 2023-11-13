@@ -1,7 +1,9 @@
+import sys
 from contextlib import closing
 from pathlib import Path
 from typing import List, Optional
 
+import ijson
 import sqlalchemy
 import typer
 
@@ -14,6 +16,7 @@ from dbcat.api import (
     add_snowflake_source,
     add_sqlite_source,
     add_bigquery_source,
+    import_from_object_stream,
     init_db,
     open_catalog,
     scan_sources,
@@ -313,6 +316,7 @@ def add_athena(
                 return
     typer.echo("Registered AWS Athena {}".format(name))
 
+
 @app.command()
 def add_bigquery(
     name: str = typer.Option(..., help="A memorable name for the database"),
@@ -339,10 +343,25 @@ def add_bigquery(
                     username = username,
                     project_id = project_id,
                     key_path = key_path,
-
                 )
             except sqlalchemy.exc.IntegrityError:
                 typer.echo("Catalog with {} name already exist".format(name))
                 return
     typer.echo("Registered Big Query Database {}".format(name))
 
+
+@app.command("import")
+def import_from_stdin():
+    catalog = open_catalog(
+        app_dir=dbcat.settings.APP_DIR,
+        secret=dbcat.settings.CATALOG_SECRET,
+        path=dbcat.settings.CATALOG_PATH,
+        host=dbcat.settings.CATALOG_HOST,
+        port=dbcat.settings.CATALOG_PORT,
+        user=dbcat.settings.CATALOG_USER,
+        password=dbcat.settings.CATALOG_PASSWORD,
+        database=dbcat.settings.CATALOG_DB,
+    )
+    with closing(catalog):
+        with catalog.managed_session:
+            import_from_object_stream(catalog, ijson.items(sys.stdin, prefix=""))

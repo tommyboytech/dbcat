@@ -18,7 +18,7 @@ from dbcat.catalog.models import (
     Job,
     JobExecution,
     JobExecutionStatus,
-    Task,
+    Task, CatForeignKey,
 )
 from dbcat.catalog.pii_types import PiiType
 
@@ -139,6 +139,15 @@ class Catalog(ABC):
             create_method_kwargs={"data_type": data_type, "sort_order": sort_order},
             name=column_name,
             table=table,
+        )
+
+    def add_foreign_key(
+            self, source_column: CatColumn, target_column: CatColumn
+    ) -> CatForeignKey:
+        return self._create(
+            model=CatForeignKey,
+            source=source_column,
+            target=target_column,
         )
 
     def add_job(self, name: str, source: CatSource, context: Dict[Any, Any]) -> Job:
@@ -370,6 +379,30 @@ class Catalog(ABC):
             .filter(Task.status == 0)
             .order_by(Task.updated_at.desc())
             .limit(1)
+            .one_or_none()
+        )
+
+    def get_foreign_key(
+            self,
+            source_db_name: str,
+            source_schema_name: str,
+            source_table_name: str,
+            source_column_name: str,
+            target_db_name: str,
+            target_schema_name: str,
+            target_table_name: str,
+            target_column_name: str,
+    ):
+        source_column = self.get_column(
+            source_db_name, source_schema_name, source_table_name, source_column_name
+        )
+        target_column = self.get_column(
+            target_db_name, target_schema_name, target_table_name, target_column_name
+        )
+        return (
+            self._current_session.query(CatForeignKey)
+            .filter(CatForeignKey.source_id == source_column.id)
+            .filter(CatForeignKey.target_id == target_column.id)
             .one_or_none()
         )
 

@@ -20,15 +20,15 @@ def upgrade():
     op.create_table(
         "foreign_keys",
         sa.Column("id", sa.Integer(), nullable=False),
-        sa.Column("source_column_id", sa.Integer(), nullable=False),
-        sa.ForeignKeyConstraint(["source_column_id"], ["columns.id"], ),
-        sa.Column("target_column_id", sa.Integer(), nullable=False),
-        sa.ForeignKeyConstraint(["target_column_id"], ["columns.id"], ),
+        sa.Column("source_id", sa.Integer(), nullable=False),
+        sa.ForeignKeyConstraint(["source_id"], ["columns.id"], ),
+        sa.Column("target_id", sa.Integer(), nullable=False),
+        sa.ForeignKeyConstraint(["target_id"], ["columns.id"], ),
         sa.Column("created_at", sa.TIMESTAMP(), nullable=False),
         sa.Column("updated_at", sa.TIMESTAMP(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("source_id", "target_id", name="unique_source_id_target_id")
     )
-
 
 def downgrade():
     op.drop_table("foreign_keys")

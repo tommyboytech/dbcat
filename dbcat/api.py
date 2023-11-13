@@ -1,8 +1,11 @@
+import json
 import logging
+import sys
 from enum import Enum
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Sequence
 
+import sqlalchemy
 import yaml
 from alembic import command
 from sqlalchemy.orm.exc import NoResultFound
@@ -15,6 +18,10 @@ from dbcat.generators import NoMatchesError
 from dbcat.migrations import get_alembic_config
 
 LOGGER = logging.getLogger(__name__)
+
+
+class IntegrityError(Exception):
+    ...
 
 
 class OutputFormat(str, Enum):
@@ -257,6 +264,7 @@ def add_athena_source(
             source_type="athena",
         )
 
+
 def add_bigquery_source(
     catalog: Catalog,
     name: str,
@@ -272,6 +280,7 @@ def add_bigquery_source(
                 key_path=key_path,
                 source_type="bigquery",
             )
+
 
 def add_oracle_source(
     catalog: Catalog,
@@ -292,3 +301,168 @@ def add_oracle_source(
             port=port,
             source_type="oracle",
         )
+
+
+def import_from_object_stream(catalog: Catalog, stream: Sequence[dict]):
+    """Import an object stream.
+
+    Each item in stream is a dictionary. Each dictionary represents an element
+    in the catalog. Items must be import after all of their dependencies.
+
+    """
+    for i, obj in enumerate(stream):
+        # Validate object
+        # if not validated, output failures, and stop
+        # Import item
+        errors = validate_import_obj(catalog, obj)
+        if errors:
+            LOGGER.error("cannot import item %d", i)
+            LOGGER.error("contents: %s", json.dumps(obj))
+            for e in errors:
+                LOGGER.error("validation error: %s", str(e))
+            raise IntegrityError("import item {} as errors".format(i))
+        consume_import_obj(catalog, obj)
+
+
+def validate_import_obj(catalog: Catalog, obj: dict) -> Sequence[str]:
+    if "type" not in obj:
+        return ["no 'type' field in object"]
+    if obj["type"] == "foreign-key":
+        return _validate_foreign_key(catalog, obj)
+    elif obj["type"] == "schema":
+        return _validate_schema(catalog, obj)
+    elif obj["type"] == "table":
+        return _validate_table(catalog, obj)
+    elif obj["type"] == "column":
+        return _validate_column(catalog, obj)
+    else:
+        return ["unknown type '{}'".format(obj["type"])]
+
+
+def _validate_foreign_key(catalog: Catalog, obj: dict) -> Sequence[str]:
+    errors = []
+    if "source" not in obj:
+        errors.append("no 'source' field in foreign-key")
+    else:
+        errors += _validate_column_stanza(catalog, "source", obj["source"])
+    if "target" not in obj:
+        errors.append("no 'target' field in foreign-key")
+    else:
+        errors += _validate_column_stanza(catalog, "target", obj["target"])
+    return errors
+
+
+def _validate_column_stanza(catalog: Catalog, stanza_name: str, stanza: dict) -> Sequence[str]:
+    errors = []
+    if "database" not in stanza:
+        errors.append("no 'database' field in '{}'".format(stanza_name))
+    if "schema" not in stanza:
+        errors.append("no 'schema' field in '{}'".format(stanza_name))
+    if "table" not in stanza:
+        errors.append("no 'table' field in '{}'".format(stanza_name))
+    if "column" not in stanza:
+        errors.append("no 'column' field in '{}'".format(stanza_name))
+    if errors:
+        return errors
+    try:
+        catalog.get_column(
+            stanza["database"],
+            stanza["schema"],
+            stanza["table"],
+            stanza["column"],
+        )
+    except sqlalchemy.orm.exc.NoResultFound as e:
+        errors.append("'{}' column <{}, {}, {}, {}> does not exist".format(
+            stanza_name,
+            stanza["database"],
+            stanza["schema"],
+            stanza["table"],
+            stanza["column"],
+        ))
+    return errors
+
+
+def _validate_schema(catalog: Catalog, obj: dict) -> Sequence[str]:
+    errors = []
+    if "database" not in obj:
+        errors.append("no 'database' field")
+    if "schema" not in obj:
+        errors.append("no 'schema' field")
+    if errors:
+        return errors
+    try:
+        catalog.get_schema(obj["database"], obj["schema"])
+        return ["schema <{}, {}> is already defined".format(obj["database"], obj["schema"])]
+    except sqlalchemy.orm.exc.NoResultFound:
+        return []
+
+
+def _validate_table(catalog: Catalog, obj: dict) -> Sequence[str]:
+    errors = []
+    if "database" not in obj:
+        errors.append("no 'database' field")
+    if "schema" not in obj:
+        errors.append("no 'schema' field")
+    if "table" not in obj:
+        errors.append("no 'table' field")
+    if errors:
+        return errors
+    try:
+        catalog.get_table(obj["database"], obj["schema"], obj["table"])
+        return ["table <{}, {}, {}> is already defined".format(obj["database"], obj["schema"], obj["table"])]
+    except sqlalchemy.orm.exc.NoResultFound:
+        return []
+
+
+def _validate_column(catalog: Catalog, obj: dict) -> Sequence[str]:
+    errors = []
+    if "database" not in obj:
+        errors.append("no 'database' field")
+    if "schema" not in obj:
+        errors.append("no 'schema' field")
+    if "table" not in obj:
+        errors.append("no 'table' field")
+    if "column" not in obj:
+        errors.append("no 'column' field")
+    if "data_type" not in obj:
+        errors.append("no 'data_type' field")
+    if "sort_order" not in obj:
+        errors.append("no 'sort_order' field")
+    if errors:
+        return errors
+    try:
+        catalog.get_column(obj["database"], obj["schema"], obj["table"], obj["column"])
+        return ["column <{}, {}, {}, {}> is already defined".format(
+            obj["database"], obj["schema"], obj["table"], obj["column"]
+        )]
+    except sqlalchemy.orm.exc.NoResultFound:
+        return []
+
+
+def consume_import_obj(catalog: Catalog, obj: dict):
+    """Obj is expected to be validated first."""
+    if obj["type"] == "foreign-key":
+        source_column = catalog.get_column(
+            obj["source"]["database"],
+            obj["source"]["schema"],
+            obj["source"]["table"],
+            obj["source"]["column"],
+        )
+        target_column = catalog.get_column(
+            obj["target"]["database"],
+            obj["target"]["schema"],
+            obj["target"]["table"],
+            obj["target"]["column"],
+        )
+        catalog.add_foreign_key(source_column, target_column)
+    elif obj["type"] == "schema":
+        source = catalog.get_source(obj["database"])
+        catalog.add_schema(obj["schema"], source)
+    elif obj["type"] == "table":
+        schema = catalog.get_schema(obj["database"], obj["schema"])
+        catalog.add_table(obj["table"], schema)
+    elif obj["type"] == "column":
+        table = catalog.get_table(obj["database"], obj["schema"], obj["table"])
+        catalog.add_column(obj["column"], obj["data_type"], obj["sort_order"], table)
+    else:
+        raise ValueError("cannot determine object type")
