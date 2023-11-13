@@ -27,8 +27,8 @@ def upgrade():
         sa.Column("created_at", sa.TIMESTAMP(), nullable=False),
         sa.Column("updated_at", sa.TIMESTAMP(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("source_id", "target_id", name="unique_source_id_target_id")
     )
-
 
 def downgrade():
     op.drop_table("foreign_keys")
