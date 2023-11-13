@@ -333,6 +333,8 @@ def validate_import_obj(catalog: Catalog, obj: dict) -> Sequence[str]:
         return _validate_schema(catalog, obj)
     elif obj["type"] == "table":
         return _validate_table(catalog, obj)
+    elif obj["type"] == "column":
+        return _validate_column(catalog, obj)
     else:
         return ["unknown type '{}'".format(obj["type"])]
 
@@ -412,6 +414,31 @@ def _validate_table(catalog: Catalog, obj: dict) -> Sequence[str]:
         return []
 
 
+def _validate_column(catalog: Catalog, obj: dict) -> Sequence[str]:
+    errors = []
+    if "database" not in obj:
+        errors.append("no 'database' field")
+    if "schema" not in obj:
+        errors.append("no 'schema' field")
+    if "table" not in obj:
+        errors.append("no 'table' field")
+    if "column" not in obj:
+        errors.append("no 'column' field")
+    if "data_type" not in obj:
+        errors.append("no 'data_type' field")
+    if "sort_order" not in obj:
+        errors.append("no 'sort_order' field")
+    if errors:
+        return errors
+    try:
+        catalog.get_column(obj["database"], obj["schema"], obj["table"], obj["column"])
+        return ["column <{}, {}, {}, {}> is already defined".format(
+            obj["database"], obj["schema"], obj["table"], obj["column"]
+        )]
+    except sqlalchemy.orm.exc.NoResultFound:
+        return []
+
+
 def consume_import_obj(catalog: Catalog, obj: dict):
     """Obj is expected to be validated first."""
     if obj["type"] == "foreign-key":
@@ -434,5 +461,8 @@ def consume_import_obj(catalog: Catalog, obj: dict):
     elif obj["type"] == "table":
         schema = catalog.get_schema(obj["database"], obj["schema"])
         catalog.add_table(obj["table"], schema)
+    elif obj["type"] == "column":
+        table = catalog.get_table(obj["database"], obj["schema"], obj["table"])
+        catalog.add_column(obj["column"], obj["data_type"], obj["sort_order"], table)
     else:
         raise ValueError("cannot determine object type")
