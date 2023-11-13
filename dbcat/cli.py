@@ -19,7 +19,7 @@ from dbcat.api import (
     import_from_object_stream,
     init_db,
     open_catalog,
-    scan_sources,
+    scan_sources, add_external_source,
 )
 from dbcat.generators import NoMatchesError
 
@@ -348,6 +348,33 @@ def add_bigquery(
                 typer.echo("Catalog with {} name already exist".format(name))
                 return
     typer.echo("Registered Big Query Database {}".format(name))
+
+
+@app.command()
+def add_external(
+    name: str = typer.Option(..., help="A memorable name for the database"),
+):
+    catalog = open_catalog(
+        app_dir=dbcat.settings.APP_DIR,
+        secret=dbcat.settings.CATALOG_SECRET,
+        path=dbcat.settings.CATALOG_PATH,
+        host=dbcat.settings.CATALOG_HOST,
+        port=dbcat.settings.CATALOG_PORT,
+        user=dbcat.settings.CATALOG_USER,
+        password=dbcat.settings.CATALOG_PASSWORD,
+        database=dbcat.settings.CATALOG_DB,
+    )
+    with closing(catalog):
+        with catalog.managed_session:
+            try:
+                add_external_source(
+                    catalog=catalog,
+                    name=name,
+                )
+            except sqlalchemy.exc.IntegrityError:
+                typer.echo("Catalog with {} name already exist".format(name))
+                return
+    typer.echo("Registered External Database {}".format(name))
 
 
 @app.command("import")

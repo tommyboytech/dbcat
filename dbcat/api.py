@@ -303,6 +303,17 @@ def add_oracle_source(
         )
 
 
+def add_external_source(
+        catalog: Catalog,
+        name: str,
+) -> CatSource:
+    with catalog.commit_context:
+        return catalog.add_source(
+            name=name,
+            source_type="external",
+        )
+
+
 def import_from_object_stream(catalog: Catalog, stream: Sequence[dict]):
     """Import an object stream.
 
