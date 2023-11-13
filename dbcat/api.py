@@ -330,16 +330,22 @@ def validate_import_obj(catalog, obj) -> Sequence[str]:
         errors.append("no 'type' field in object")
         return errors
     if obj["type"] == "foreign-key":
-        if "source" not in obj:
-            errors.append("no 'source' field in foreign-key")
-        else:
-            errors += _validate_column_stanza(catalog, "source", obj["source"])
-        if "target" not in obj:
-            errors.append("no 'target' field in foreign-key")
-        else:
-            errors += _validate_column_stanza(catalog, "target", obj["target"])
+        _validate_foreign_key(catalog, obj)
     else:
         errors.append("unknown type '{}'".format(obj["type"]))
+    return errors
+
+
+def _validate_foreign_key(catalog, obj):
+    errors = []
+    if "source" not in obj:
+        errors.append("no 'source' field in foreign-key")
+    else:
+        errors += _validate_column_stanza(catalog, "source", obj["source"])
+    if "target" not in obj:
+        errors.append("no 'target' field in foreign-key")
+    else:
+        errors += _validate_column_stanza(catalog, "target", obj["target"])
     return errors
 
 
