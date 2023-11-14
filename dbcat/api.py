@@ -335,7 +335,7 @@ def import_from_object_stream(catalog: Catalog, stream: Sequence[dict]):
 def validate_import_obj(catalog: Catalog, obj: dict) -> Sequence[str]:
     if "type" not in obj:
         return ["no 'type' field in object"]
-    if obj["type"] == "foreign-key":
+    if obj["type"] == "foreign_key":
         return _validate_foreign_key(catalog, obj)
     elif obj["type"] == "schema":
         return _validate_schema(catalog, obj)
@@ -350,11 +350,11 @@ def validate_import_obj(catalog: Catalog, obj: dict) -> Sequence[str]:
 def _validate_foreign_key(catalog: Catalog, obj: dict) -> Sequence[str]:
     errors = []
     if "source" not in obj:
-        errors.append("no 'source' field in foreign-key")
+        errors.append("no 'source' field in foreign_key")
     else:
         errors += _validate_column_stanza(catalog, "source", obj["source"])
     if "target" not in obj:
-        errors.append("no 'target' field in foreign-key")
+        errors.append("no 'target' field in foreign_key")
     else:
         errors += _validate_column_stanza(catalog, "target", obj["target"])
     return errors
@@ -449,7 +449,7 @@ def _validate_column(catalog: Catalog, obj: dict) -> Sequence[str]:
 
 def consume_import_obj(catalog: Catalog, obj: dict):
     """Obj is expected to be validated first."""
-    if obj["type"] == "foreign-key":
+    if obj["type"] == "foreign_key":
         source_column = catalog.get_column(
             obj["source"]["database"],
             obj["source"]["schema"],

@@ -99,7 +99,7 @@ def test_import_foreign_key_fails(open_catalog_connection, caplog):
                 "exc": r"no 'type' field in object",
             }, {
                 "data": {
-                    "type": "foreign-key",
+                    "type": "foreign_key",
                     "source": {
                         "database": "s1",
                         "schema": "sc1",
@@ -107,10 +107,10 @@ def test_import_foreign_key_fails(open_catalog_connection, caplog):
                         "column": "t1c1",
                     },
                 },
-                "exc": r"no 'target' field in foreign-key",
+                "exc": r"no 'target' field in foreign_key",
             }, {
                 "data": {
-                    "type": "foreign-key",
+                    "type": "foreign_key",
                     "target": {
                         "database": "s1",
                         "schema": "sc1",
@@ -118,10 +118,10 @@ def test_import_foreign_key_fails(open_catalog_connection, caplog):
                         "column": "c1",
                     },
                 },
-                "exc": r"no 'source' field in foreign-key",
+                "exc": r"no 'source' field in foreign_key",
             }, {
                 "data": {
-                    "type": "foreign-key",
+                    "type": "foreign_key",
                     "source": {
                         "schema": "sc1",
                         "table": "t2",
@@ -137,7 +137,7 @@ def test_import_foreign_key_fails(open_catalog_connection, caplog):
                 "exc": r"no 'database' field in 'source'",
             }, {
                 "data": {
-                    "type": "foreign-key",
+                    "type": "foreign_key",
                     "source": {
                         "database": "s1",
                         "table": "t2",
@@ -153,7 +153,7 @@ def test_import_foreign_key_fails(open_catalog_connection, caplog):
                 "exc": r"no 'schema' field in 'source'",
             }, {
                 "data": {
-                    "type": "foreign-key",
+                    "type": "foreign_key",
                     "source": {
                         "database": "s1",
                         "schema": "sc1",
@@ -169,7 +169,7 @@ def test_import_foreign_key_fails(open_catalog_connection, caplog):
                 "exc": r"no 'table' field in 'source'",
             }, {
                 "data": {
-                    "type": "foreign-key",
+                    "type": "foreign_key",
                     "source": {
                         "database": "s1",
                         "schema": "sc1",
@@ -185,7 +185,7 @@ def test_import_foreign_key_fails(open_catalog_connection, caplog):
                 "exc": r"no 'column' field in 'source'",
             }, {
                 "data": {
-                    "type": "foreign-key",
+                    "type": "foreign_key",
                     "source": {
                         "database": "Xs1",
                         "schema": "sc1",
@@ -202,7 +202,7 @@ def test_import_foreign_key_fails(open_catalog_connection, caplog):
                 "exc": r"'source' column \<Xs1, sc1, t2, t1c1\> does not exist",
             }, {
                 "data": {
-                    "type": "foreign-key",
+                    "type": "foreign_key",
                     "source": {
                         "database": "s1",
                         "schema": "sc1",
@@ -236,7 +236,7 @@ def test_import_foreign_key_succeeds(open_catalog_connection):
         t2 = catalog.add_table("t2", sc1)
         catalog.add_column("t1c1", "Int", 1, t2)
         data = {
-            "type": "foreign-key",
+            "type": "foreign_key",
             "source": {
                 "database": "s1",
                 "schema": "sc1",
