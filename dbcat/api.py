@@ -322,9 +322,6 @@ def import_from_object_stream(catalog: Catalog, stream: Sequence[dict]):
 
     """
     for i, obj in enumerate(stream):
-        # Validate object
-        # if not validated, output failures, and stop
-        # Import item
         errors = validate_import_obj(catalog, obj)
         if errors:
             LOGGER.error("cannot import item %d", i)
