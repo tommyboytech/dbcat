@@ -45,7 +45,6 @@ great-expectations = {version = "^0.13.42", optional = true}
 pydantic = "^1.8.2"
 greenlet = "^3.0.1"
 sqlalchemy-utils = "^0.38.3"
-ijson = "^3.2.3"
 
 [tool.poetry.extras]
 datahub = ["acryl-datahub", "great-expectations"]

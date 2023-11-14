@@ -1,9 +1,9 @@
+import json
 import sys
 from contextlib import closing
 from pathlib import Path
 from typing import List, Optional
 
-import ijson
 import sqlalchemy
 import typer
 
@@ -389,6 +389,11 @@ def import_from_stdin():
         password=dbcat.settings.CATALOG_PASSWORD,
         database=dbcat.settings.CATALOG_DB,
     )
+
+    def json_stream(f):
+        for line in f:
+            yield json.loads(line.strip())
+
     with closing(catalog):
         with catalog.managed_session:
-            import_from_object_stream(catalog, ijson.items(sys.stdin, prefix=""))
+            import_from_object_stream(catalog, json_stream(sys.stdin))
