@@ -438,6 +438,8 @@ def direct_references_to(
                     fk.source.table.name,
                     fk.source.name,
                 ))
+
+
 @app.command("direct-references-from")
 def direct_references_from(
         source: str = typer.Option(..., help="Column source"),
