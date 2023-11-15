@@ -438,3 +438,42 @@ def direct_references_to(
                     fk.source.table.name,
                     fk.source.name,
                 ))
+@app.command("direct-references-from")
+def direct_references_from(
+        source: str = typer.Option(..., help="Column source"),
+        schema: str = typer.Option(..., help="Column schema"),
+        table: str = typer.Option(..., help="Column table"),
+        column: str = typer.Option(..., help="Column name"),
+):
+    """Find what a column references.
+
+    This piece is absolutely prototype code/UI. I think a more useful
+    implementation might:
+
+    * Support searches on incomplete information.
+    * Put this under a query subcommand.
+    * Have a compact query for; e.g. t3.t3.*.id to find all links to ID fields.
+    * Have a compact human form corresponding to the output form above.
+    * Allow the ingestion of the partial import form (maybe?)
+    * Optionally report results in the JSON import form.
+
+    """
+    catalog = open_catalog(
+        app_dir=dbcat.settings.APP_DIR,
+        secret=dbcat.settings.CATALOG_SECRET,
+        path=dbcat.settings.CATALOG_PATH,
+        host=dbcat.settings.CATALOG_HOST,
+        port=dbcat.settings.CATALOG_PORT,
+        user=dbcat.settings.CATALOG_USER,
+        password=dbcat.settings.CATALOG_PASSWORD,
+        database=dbcat.settings.CATALOG_DB,
+    )
+    with closing(catalog):
+        with catalog.managed_session:
+            for fk in catalog.query_references_from(source, schema, table, column):
+                print("<{}, {}, {}, {}>".format(
+                    fk.target.table.schema.source.name,
+                    fk.target.table.schema.name,
+                    fk.target.table.name,
+                    fk.target.name,
+                ))

@@ -511,6 +511,14 @@ class Catalog(ABC):
             .all()
         )
 
+    def query_references_from(self, source: str, schema: str, table: str, column: str):
+        source_column = self.get_column(source, schema, table, column)
+        return (
+            self._current_session.query(CatForeignKey)
+            .filter(CatForeignKey.source_id == source_column.id)
+            .all()
+        )
+
 
 class PGCatalog(Catalog):
     def __init__(
