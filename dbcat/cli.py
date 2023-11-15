@@ -8,6 +8,7 @@ import sqlalchemy
 import typer
 
 import dbcat.settings
+from dbcat.catalog.models import CatForeignKey
 from dbcat.api import (
     add_athena_source,
     add_mysql_source,
@@ -19,7 +20,7 @@ from dbcat.api import (
     import_from_object_stream,
     init_db,
     open_catalog,
-    scan_sources, add_external_source
+    scan_sources, add_external_source, parse_spec, export_format
 )
 from dbcat.generators import NoMatchesError
 
@@ -401,10 +402,11 @@ def import_from_stdin():
 
 @app.command("references-to")
 def references_to(
-        source: str = typer.Option(..., help="Column source"),
-        schema: str = typer.Option(..., help="Column schema"),
-        table: str = typer.Option(..., help="Column table"),
-        column: str = typer.Option(..., help="Column name"),
+        column: str = typer.Argument(
+            ...,
+            help="Column spec of src:schema:table:column",
+            metavar="SPEC"
+        ),
 ):
     """Find direct references to a column.
 
@@ -413,12 +415,12 @@ def references_to(
 
     * Support searches on incomplete information.
     * Put this under a query subcommand.
-    * Have a compact query for; e.g. t3.t3.*.id to find all links to ID fields.
     * Have a compact human form corresponding to the output form above.
     * Allow the ingestion of the partial import form (maybe?)
     * Optionally report results in the JSON import form.
 
     """
+    spec = parse_spec(column)
     catalog = open_catalog(
         app_dir=dbcat.settings.APP_DIR,
         secret=dbcat.settings.CATALOG_SECRET,
@@ -431,7 +433,9 @@ def references_to(
     )
     with closing(catalog):
         with catalog.managed_session:
-            for fk in catalog.query_references_to(column, table, schema, source):
+            for fk in catalog.query_references_to(
+                spec.column, spec.table, spec.schema, spec.source
+            ):
                 print("<{}, {}, {}, {}>".format(
                     fk.source.table.schema.source.name,
                     fk.source.table.schema.name,
@@ -442,24 +446,25 @@ def references_to(
 
 @app.command("target-of")
 def target_of(
-        source: str = typer.Option(..., help="Column source"),
-        schema: str = typer.Option(..., help="Column schema"),
-        table: str = typer.Option(..., help="Column table"),
-        column: str = typer.Option(..., help="Column name"),
+        column: str = typer.Argument(
+            ...,
+            help="Column spec of src:schema:table:column",
+            metavar="SPEC"
+        ),
 ):
-    """Find what a column references.
+    """Find what a column refers to.
 
     This piece is absolutely prototype code/UI. I think a more useful
     implementation might:
 
     * Support searches on incomplete information.
     * Put this under a query subcommand.
-    * Have a compact query for; e.g. t3.t3.*.id to find all links to ID fields.
     * Have a compact human form corresponding to the output form above.
     * Allow the ingestion of the partial import form (maybe?)
     * Optionally report results in the JSON import form.
 
     """
+    spec = parse_spec(column)
     catalog = open_catalog(
         app_dir=dbcat.settings.APP_DIR,
         secret=dbcat.settings.CATALOG_SECRET,
@@ -472,7 +477,9 @@ def target_of(
     )
     with closing(catalog):
         with catalog.managed_session:
-            for fk in catalog.query_references_from(column, table, schema, source):
+            for fk in catalog.query_references_from(
+                spec.column, spec.table, spec.schema, spec.source
+            ):
                 print("<{}, {}, {}, {}>".format(
                     fk.target.table.schema.source.name,
                     fk.target.table.schema.name,
@@ -483,10 +490,11 @@ def target_of(
 
 @app.command("columns")
 def search_columns(
-        source: str = typer.Option(None, help="Column source"),
-        schema: str = typer.Option(None, help="Column schema"),
-        table: str = typer.Option(None, help="Column table"),
-        column: str = typer.Option('%', help="Column name"),
+    query: str = typer.Argument(
+        ...,
+        help="Source column spec of src:schema:table:column",
+        metavar="SPEC"
+    ),
 ):
     """Search for columns matching query
 
@@ -500,6 +508,7 @@ def search_columns(
     * Optionally report results in the JSON import form.
 
     """
+    spec = parse_spec(query, default='%')
     catalog = open_catalog(
         app_dir=dbcat.settings.APP_DIR,
         secret=dbcat.settings.CATALOG_SECRET,
@@ -512,7 +521,9 @@ def search_columns(
     )
     with closing(catalog):
         with catalog.managed_session:
-            for col in sorted(catalog.search_column(column, table, schema, source)):
+            for col in sorted(catalog.search_column(
+                    spec.column, spec.table, spec.schema, spec.source
+            )):
                 print("<{}, {}, {}, {}>".format(
                     col.table.schema.source.name,
                     col.table.schema.name,
@@ -523,10 +534,11 @@ def search_columns(
 
 @app.command("tables")
 def search_tables(
-        source: str = typer.Option(None, help="Column source"),
-        schema: str = typer.Option(None, help="Column schema"),
-        table: str = typer.Option(None, help="Column table"),
-        column: str = typer.Option('%', help="Column name"),
+    query: str = typer.Argument(
+        ...,
+        help="Source column spec of src:schema:table:column",
+        metavar="SPEC"
+    ),
 ):
     """Search for tables matching query.
 
@@ -534,12 +546,12 @@ def search_tables(
     implementation might:
 
     * Put this under a query subcommand.
-    * Have a compact query for; e.g. t3.t3.*.id to find all links to ID fields.
     * Have a compact human form corresponding to the output form above.
     * Allow the ingestion of the partial import form (maybe?)
     * Optionally report results in the JSON import form.
 
     """
+    spec = parse_spec(query, default='%')
     catalog = open_catalog(
         app_dir=dbcat.settings.APP_DIR,
         secret=dbcat.settings.CATALOG_SECRET,
@@ -553,8 +565,9 @@ def search_tables(
     with closing(catalog):
         with catalog.managed_session:
             tables = set()
-
-            for col in catalog.search_column(column, table, schema, source):
+            for col in catalog.search_column(
+                spec.column,spec.table, spec.schema, spec.source,
+            ):
                 tables.add((
                     col.table.schema.source.name,
                     col.table.schema.name,
@@ -562,3 +575,46 @@ def search_tables(
                 ))
             for tbl in sorted(tables):
                 print("<{}, {}, {}>".format(*tbl))
+
+
+@app.command("add-foreign-key")
+def add_foreign_key(
+        source: str = typer.Option(
+            ...,
+            help="Source column spec of src:schema:table:column",
+            metavar="SOURCE"
+        ),
+        target: str = typer.Option(
+            ...,
+            help="Target column spec of src:schema:table:column",
+            metavar="TARGET"
+        ),
+):
+    source_spec = parse_spec(source)
+    if source_spec.kind != "column":
+        typer.echo("The source must be a column", file=sys.stderr)
+        raise typer.Exit(code=126)
+    target_spec = parse_spec(target)
+    if target_spec.kind != "column":
+        typer.echo("The target must be a column", file=sys.stderr)
+        raise typer.Exit(code=126)
+    catalog = open_catalog(
+        app_dir=dbcat.settings.APP_DIR,
+        secret=dbcat.settings.CATALOG_SECRET,
+        path=dbcat.settings.CATALOG_PATH,
+        host=dbcat.settings.CATALOG_HOST,
+        port=dbcat.settings.CATALOG_PORT,
+        user=dbcat.settings.CATALOG_USER,
+        password=dbcat.settings.CATALOG_PASSWORD,
+        database=dbcat.settings.CATALOG_DB,
+    )
+    with closing(catalog):
+        with catalog.managed_session:
+            source_column = catalog.get_column(
+                source_spec.source, source_spec.schema, source_spec.table, source_spec.column
+            )
+            target_column = catalog.get_column(
+                target_spec.source, target_spec.schema, target_spec.table, target_spec.column
+            )
+            fk = catalog.add_foreign_key(source_column, target_column)
+            typer.echo(json.dumps(export_format(fk)))

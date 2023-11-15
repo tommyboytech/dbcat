@@ -1,5 +1,7 @@
+import itertools
 import json
 import logging
+from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 from typing import List, Optional, Sequence
@@ -10,7 +12,7 @@ from alembic import command
 from sqlalchemy.orm.exc import NoResultFound
 
 import dbcat.settings
-from dbcat.catalog import Catalog, CatSource
+from dbcat.catalog import Catalog, CatForeignKey, CatSource
 from dbcat.catalog.catalog import PGCatalog, SqliteCatalog
 from dbcat.catalog.db import DbScanner
 from dbcat.generators import NoMatchesError
@@ -473,3 +475,92 @@ def consume_import_obj(catalog: Catalog, obj: dict):
         catalog.add_column(obj["column"], obj["data_type"], obj["sort_order"], table)
     else:
         raise ValueError("cannot determine object type")
+
+
+def export_format(obj):
+    """Generates an export dictionary for the represented object.
+
+    Currently, this supports:
+        foreign_keys
+
+    """
+    if isinstance(obj, CatForeignKey):
+        return {
+            "type": "foreign_key",
+            "source": {
+                "database": obj.source.table.schema.source.name,
+                "schema": obj.source.table.schema.name,
+                "table": obj.source.table.name,
+                "column": obj.source.name,
+            },
+            "target": {
+                "database": obj.target.table.schema.source.name,
+                "schema": obj.target.table.schema.name,
+                "table": obj.target.table.name,
+                "column": obj.target.name,
+            },
+        }
+    else:
+        raise NotImplementedError(
+            "the object type {} has not been handled yet".format(type(obj))
+        )
+
+
+@dataclass
+class Spec:
+    kind: str
+    source: Optional[str] = None
+    schema: Optional[str] = None
+    table: Optional[str] = None
+    column: Optional[str] = None
+
+
+def parse_spec(query_string: str, default: Optional[str] = None) -> Spec:
+    """Reads a component description.
+
+    Component descriptions are used on the command line to replace a
+    series of --source, --schema, --table, --column options with a
+    single option.
+
+    A component description looks like this:
+
+    `source[:schema[:table[:column]]]`
+
+    The spec returned looks like:
+    ```
+    Spec(
+       kind="source"|"schema"|"table"|"column",
+       source=source|None,
+       schema=schema|None,
+       table=table|None,
+       column=column|None,
+    )
+    ```
+
+    A component description may omit components. So, this description:
+
+    `foo::bar`
+
+    Is a table specification (`spec["kind"] == "table"`) because it has
+    three components, and the schema component is `None` (`spec["schema"] is None`).
+
+    The full spec for `foo::bar` would be:
+    ```
+    Spec(
+       kind=table,
+       source="foo",
+       schema=None,
+       table="bar",
+       column=None,
+    )
+    ```
+
+    """
+    parts = query_string.split(":")
+    if len(parts) > 4:
+        raise ValueError("too many entity components")
+    entity_names = ["source", "schema", "table", "column"]
+    spec = {"kind": entity_names[len(parts)-1]}
+    for entity, value in itertools.zip_longest(entity_names, parts, fillvalue=default):
+        spec[entity] = value or default
+    return Spec(**spec)
