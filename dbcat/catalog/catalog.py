@@ -503,6 +503,14 @@ class Catalog(ABC):
             str(self._current_session),
         )
 
+    def query_references_to(self, source: str, schema: str, table: str, column: str):
+        target = self.get_column(source, schema, table, column)
+        return (
+            self._current_session.query(CatForeignKey)
+            .filter(CatForeignKey.target_id == target.id)
+            .all()
+        )
+
 
 class PGCatalog(Catalog):
     def __init__(

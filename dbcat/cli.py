@@ -19,7 +19,7 @@ from dbcat.api import (
     import_from_object_stream,
     init_db,
     open_catalog,
-    scan_sources, add_external_source,
+    scan_sources, add_external_source, query_references_to,
 )
 from dbcat.generators import NoMatchesError
 
@@ -397,3 +397,44 @@ def import_from_stdin():
     with closing(catalog):
         with catalog.managed_session:
             import_from_object_stream(catalog, json_stream(sys.stdin))
+
+
+@app.command("direct-references-to")
+def direct_references_to(
+        source: str = typer.Option(..., help="Column source"),
+        schema: str = typer.Option(..., help="Column schema"),
+        table: str = typer.Option(..., help="Column table"),
+        column: str = typer.Option(..., help="Column name"),
+):
+    """Find direct references to a column.
+
+    This piece is absolutely prototype code/UI. I think a more useful
+    implementation might:
+
+    * Support searches on incomplete information.
+    * Put this under a query subcommand.
+    * Have a compact query for; e.g. t3.t3.*.id to find all links to ID fields.
+    * Have a compact human form corresponding to the output form above.
+    * Allow the ingestion of the partial import form (maybe?)
+    * Optionally report results in the JSON import form.
+
+    """
+    catalog = open_catalog(
+        app_dir=dbcat.settings.APP_DIR,
+        secret=dbcat.settings.CATALOG_SECRET,
+        path=dbcat.settings.CATALOG_PATH,
+        host=dbcat.settings.CATALOG_HOST,
+        port=dbcat.settings.CATALOG_PORT,
+        user=dbcat.settings.CATALOG_USER,
+        password=dbcat.settings.CATALOG_PASSWORD,
+        database=dbcat.settings.CATALOG_DB,
+    )
+    with closing(catalog):
+        with catalog.managed_session:
+            for fk in query_references_to(catalog, source, schema, table, column):
+                print("<{}, {}, {}, {}>".format(
+                    fk.source.table.schema.source.name,
+                    fk.source.table.schema.name,
+                    fk.source.table.name,
+                    fk.source.name,
+                ))

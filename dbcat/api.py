@@ -1,6 +1,5 @@
 import json
 import logging
-import sys
 from enum import Enum
 from pathlib import Path
 from typing import List, Optional, Sequence
@@ -11,7 +10,7 @@ from alembic import command
 from sqlalchemy.orm.exc import NoResultFound
 
 import dbcat.settings
-from dbcat.catalog import Catalog, CatSource
+from dbcat.catalog import Catalog, CatForeignKey, CatSource
 from dbcat.catalog.catalog import PGCatalog, SqliteCatalog
 from dbcat.catalog.db import DbScanner
 from dbcat.generators import NoMatchesError
@@ -474,3 +473,10 @@ def consume_import_obj(catalog: Catalog, obj: dict):
         catalog.add_column(obj["column"], obj["data_type"], obj["sort_order"], table)
     else:
         raise ValueError("cannot determine object type")
+
+
+def query_references_to(
+        catalog: Catalog, source: str, schema: str, table: str, column: str
+) -> Sequence[CatForeignKey]:
+    """Find foreign keys referencing a single column."""
+    return catalog.query_references_to(source, schema, table, column)
