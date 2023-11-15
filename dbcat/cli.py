@@ -399,8 +399,8 @@ def import_from_stdin():
             import_from_object_stream(catalog, json_stream(sys.stdin))
 
 
-@app.command("direct-references-to")
-def direct_references_to(
+@app.command("references-to")
+def references_to(
         source: str = typer.Option(..., help="Column source"),
         schema: str = typer.Option(..., help="Column schema"),
         table: str = typer.Option(..., help="Column table"),
@@ -440,8 +440,8 @@ def direct_references_to(
                 ))
 
 
-@app.command("direct-references-from")
-def direct_references_from(
+@app.command("target-of")
+def target_of(
         source: str = typer.Option(..., help="Column source"),
         schema: str = typer.Option(..., help="Column schema"),
         table: str = typer.Option(..., help="Column table"),
