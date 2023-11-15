@@ -479,3 +479,86 @@ def direct_references_from(
                     fk.target.table.name,
                     fk.target.name,
                 ))
+
+
+@app.command("columns")
+def search_columns(
+        source: str = typer.Option(None, help="Column source"),
+        schema: str = typer.Option(None, help="Column schema"),
+        table: str = typer.Option(None, help="Column table"),
+        column: str = typer.Option('%', help="Column name"),
+):
+    """Search for columns matching query
+
+    This piece is absolutely prototype code/UI. I think a more useful
+    implementation might:
+
+    * Put this under a query subcommand.
+    * Have a compact query for; e.g. t3.t3.*.id to find all links to ID fields.
+    * Have a compact human form corresponding to the output form above.
+    * Allow the ingestion of the partial import form (maybe?)
+    * Optionally report results in the JSON import form.
+
+    """
+    catalog = open_catalog(
+        app_dir=dbcat.settings.APP_DIR,
+        secret=dbcat.settings.CATALOG_SECRET,
+        path=dbcat.settings.CATALOG_PATH,
+        host=dbcat.settings.CATALOG_HOST,
+        port=dbcat.settings.CATALOG_PORT,
+        user=dbcat.settings.CATALOG_USER,
+        password=dbcat.settings.CATALOG_PASSWORD,
+        database=dbcat.settings.CATALOG_DB,
+    )
+    with closing(catalog):
+        with catalog.managed_session:
+            for col in sorted(catalog.search_column(column, table, schema, source)):
+                print("<{}, {}, {}, {}>".format(
+                    col.table.schema.source.name,
+                    col.table.schema.name,
+                    col.table.name,
+                    col.name,
+                ))
+
+
+@app.command("tables")
+def search_tables(
+        source: str = typer.Option(None, help="Column source"),
+        schema: str = typer.Option(None, help="Column schema"),
+        table: str = typer.Option(None, help="Column table"),
+        column: str = typer.Option('%', help="Column name"),
+):
+    """Search for tables matching query.
+
+    This piece is absolutely prototype code/UI. I think a more useful
+    implementation might:
+
+    * Put this under a query subcommand.
+    * Have a compact query for; e.g. t3.t3.*.id to find all links to ID fields.
+    * Have a compact human form corresponding to the output form above.
+    * Allow the ingestion of the partial import form (maybe?)
+    * Optionally report results in the JSON import form.
+
+    """
+    catalog = open_catalog(
+        app_dir=dbcat.settings.APP_DIR,
+        secret=dbcat.settings.CATALOG_SECRET,
+        path=dbcat.settings.CATALOG_PATH,
+        host=dbcat.settings.CATALOG_HOST,
+        port=dbcat.settings.CATALOG_PORT,
+        user=dbcat.settings.CATALOG_USER,
+        password=dbcat.settings.CATALOG_PASSWORD,
+        database=dbcat.settings.CATALOG_DB,
+    )
+    with closing(catalog):
+        with catalog.managed_session:
+            tables = set()
+
+            for col in catalog.search_column(column, table, schema, source):
+                tables.add((
+                    col.table.schema.source.name,
+                    col.table.schema.name,
+                    col.table.name,
+                ))
+            for tbl in sorted(tables):
+                print("<{}, {}, {}>".format(*tbl))
