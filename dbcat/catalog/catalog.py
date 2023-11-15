@@ -503,7 +503,7 @@ class Catalog(ABC):
             str(self._current_session),
         )
 
-    def query_references_to(self, source: str, schema: str, table: str, column: str):
+    def query_references_to(self,  column: str, table: str, schema: str, source: str):
         target = self.get_column(source, schema, table, column)
         return (
             self._current_session.query(CatForeignKey)
@@ -511,7 +511,7 @@ class Catalog(ABC):
             .all()
         )
 
-    def query_references_from(self, source: str, schema: str, table: str, column: str):
+    def query_references_from(self,  column: str, table: str, schema: str, source: str):
         source_column = self.get_column(source, schema, table, column)
         return (
             self._current_session.query(CatForeignKey)

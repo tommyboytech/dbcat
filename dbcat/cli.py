@@ -431,7 +431,7 @@ def references_to(
     )
     with closing(catalog):
         with catalog.managed_session:
-            for fk in catalog.query_references_to(source, schema, table, column):
+            for fk in catalog.query_references_to(column, table, schema, source):
                 print("<{}, {}, {}, {}>".format(
                     fk.source.table.schema.source.name,
                     fk.source.table.schema.name,
@@ -472,7 +472,7 @@ def target_of(
     )
     with closing(catalog):
         with catalog.managed_session:
-            for fk in catalog.query_references_from(source, schema, table, column):
+            for fk in catalog.query_references_from(column, table, schema, source):
                 print("<{}, {}, {}, {}>".format(
                     fk.target.table.schema.source.name,
                     fk.target.table.schema.name,
