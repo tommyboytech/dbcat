@@ -19,7 +19,7 @@ from dbcat.api import (
     import_from_object_stream,
     init_db,
     open_catalog,
-    scan_sources, add_external_source, query_references_to,
+    scan_sources, add_external_source
 )
 from dbcat.generators import NoMatchesError
 
@@ -431,7 +431,7 @@ def direct_references_to(
     )
     with closing(catalog):
         with catalog.managed_session:
-            for fk in query_references_to(catalog, source, schema, table, column):
+            for fk in catalog.query_references_to(source, schema, table, column):
                 print("<{}, {}, {}, {}>".format(
                     fk.source.table.schema.source.name,
                     fk.source.table.schema.name,
