@@ -666,5 +666,5 @@ def rm_foreign_key(
             # fk = CatForeignKey(target=target_column, source=source_column)
             removed = catalog.remove_foreign_key(source_column, target_column)
             if removed > 0:
-                fk = :CatForeignKey(source=source_column, target=target_column)
+                fk = CatForeignKey(source=source_column, target=target_column)
                 typer.echo(json.dumps(export_format(fk, action=Action.remove)))
