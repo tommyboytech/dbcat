@@ -150,6 +150,17 @@ class Catalog(ABC):
             target=target_column,
         )
 
+    def remove_foreign_key(
+            self, source_column: CatColumn, target_column: CatColumn
+    ) -> CatForeignKey:
+        return (
+            self._current_session.query(CatForeignKey)
+            .filter(
+                CatForeignKey.source_id == source_column.id,
+                CatForeignKey.target_id == target_column.id,
+            ).delete()
+        )
+
     def add_job(self, name: str, source: CatSource, context: Dict[Any, Any]) -> Job:
         return self._create(
             model=Job,

@@ -24,6 +24,10 @@ LOGGER = logging.getLogger(__name__)
 class IntegrityError(Exception):
     ...
 
+class Action(str, Enum):
+    add = "add"
+    remove = "remove"
+
 
 class OutputFormat(str, Enum):
     tabular = "tabular"
@@ -463,7 +467,11 @@ def consume_import_obj(catalog: Catalog, obj: dict):
             obj["target"]["table"],
             obj["target"]["column"],
         )
-        catalog.add_foreign_key(source_column, target_column)
+        action = Action(obj.get("action", str(Action.add)))
+        if action == Action.add:
+            catalog.add_foreign_key(source_column, target_column)
+        elif action == Action.remove:
+            catalog.remove_foreign_key(source_column, target_column)
     elif obj["type"] == "schema":
         source = catalog.get_source(obj["database"])
         catalog.add_schema(obj["schema"], source)
@@ -477,29 +485,37 @@ def consume_import_obj(catalog: Catalog, obj: dict):
         raise ValueError("cannot determine object type")
 
 
-def export_format(obj):
+def export_format(obj, action: Optional[Action] = None):
     """Generates an export dictionary for the represented object.
 
     Currently, this supports:
         foreign_keys
 
     """
+    def attach_action(obj, action: Optional[Action]):
+        if action:
+            obj["action"] = action.value
+        return obj
+
     if isinstance(obj, CatForeignKey):
-        return {
-            "type": "foreign_key",
-            "source": {
-                "database": obj.source.table.schema.source.name,
-                "schema": obj.source.table.schema.name,
-                "table": obj.source.table.name,
-                "column": obj.source.name,
+        return attach_action(
+            {
+                "type": "foreign_key",
+                "source": {
+                    "database": obj.source.table.schema.source.name,
+                    "schema": obj.source.table.schema.name,
+                    "table": obj.source.table.name,
+                    "column": obj.source.name,
+                },
+                "target": {
+                    "database": obj.target.table.schema.source.name,
+                    "schema": obj.target.table.schema.name,
+                    "table": obj.target.table.name,
+                    "column": obj.target.name,
+                },
             },
-            "target": {
-                "database": obj.target.table.schema.source.name,
-                "schema": obj.target.table.schema.name,
-                "table": obj.target.table.name,
-                "column": obj.target.name,
-            },
-        }
+            action
+        )
     else:
         raise NotImplementedError(
             "the object type {} has not been handled yet".format(type(obj))

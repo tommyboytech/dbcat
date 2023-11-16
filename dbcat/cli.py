@@ -10,17 +10,21 @@ import typer
 import dbcat.settings
 from dbcat.catalog.models import CatForeignKey
 from dbcat.api import (
+    Action,
     add_athena_source,
+    add_external_source,
     add_mysql_source,
     add_postgresql_source,
     add_redshift_source,
     add_snowflake_source,
     add_sqlite_source,
     add_bigquery_source,
+    export_format,
     import_from_object_stream,
     init_db,
     open_catalog,
-    scan_sources, add_external_source, parse_spec, export_format
+    parse_spec,
+    scan_sources,
 )
 from dbcat.generators import NoMatchesError
 
@@ -618,3 +622,49 @@ def add_foreign_key(
             )
             fk = catalog.add_foreign_key(source_column, target_column)
             typer.echo(json.dumps(export_format(fk)))
+
+
+@app.command("rm-foreign-key")
+def rm_foreign_key(
+        source: str = typer.Option(
+            ...,
+            help="Source column spec of src:schema:table:column",
+            metavar="SOURCE"
+        ),
+        target: str = typer.Option(
+            ...,
+            help="Target column spec of src:schema:table:column",
+            metavar="TARGET"
+        ),
+):
+    source_spec = parse_spec(source)
+    if source_spec.kind != "column":
+        typer.echo("The source must be a column", file=sys.stderr)
+        raise typer.Exit(code=126)
+    target_spec = parse_spec(target)
+    if target_spec.kind != "column":
+        typer.echo("The target must be a column", file=sys.stderr)
+        raise typer.Exit(code=126)
+    catalog = open_catalog(
+        app_dir=dbcat.settings.APP_DIR,
+        secret=dbcat.settings.CATALOG_SECRET,
+        path=dbcat.settings.CATALOG_PATH,
+        host=dbcat.settings.CATALOG_HOST,
+        port=dbcat.settings.CATALOG_PORT,
+        user=dbcat.settings.CATALOG_USER,
+        password=dbcat.settings.CATALOG_PASSWORD,
+        database=dbcat.settings.CATALOG_DB,
+    )
+    with closing(catalog):
+        with catalog.managed_session:
+            source_column = catalog.get_column(
+                source_spec.source, source_spec.schema, source_spec.table, source_spec.column
+            )
+            target_column = catalog.get_column(
+                target_spec.source, target_spec.schema, target_spec.table, target_spec.column
+            )
+            # fk = CatForeignKey(target=target_column, source=source_column)
+            removed = catalog.remove_foreign_key(source_column, target_column)
+            if removed > 0:
+                fk = :CatForeignKey(source=source_column, target=target_column)
+                typer.echo(json.dumps(export_format(fk, action=Action.remove)))
