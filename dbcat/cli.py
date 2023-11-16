@@ -436,7 +436,7 @@ def references_to(
             for fk in catalog.query_references_to(
                 spec.column, spec.table, spec.schema, spec.source
             ):
-                print("<{}, {}, {}, {}>".format(
+                print("{}:{}:{}:{}".format(
                     fk.source.table.schema.source.name,
                     fk.source.table.schema.name,
                     fk.source.table.name,
@@ -480,7 +480,7 @@ def target_of(
             for fk in catalog.query_references_from(
                 spec.column, spec.table, spec.schema, spec.source
             ):
-                print("<{}, {}, {}, {}>".format(
+                print("{}:{}:{}:{}".format(
                     fk.target.table.schema.source.name,
                     fk.target.table.schema.name,
                     fk.target.table.name,
@@ -524,7 +524,7 @@ def search_columns(
             for col in sorted(catalog.search_column(
                     spec.column, spec.table, spec.schema, spec.source
             )):
-                print("<{}, {}, {}, {}>".format(
+                print("{}:{}:{}:{}".format(
                     col.table.schema.source.name,
                     col.table.schema.name,
                     col.table.name,
@@ -574,7 +574,7 @@ def search_tables(
                     col.table.name,
                 ))
             for tbl in sorted(tables):
-                print("<{}, {}, {}>".format(*tbl))
+                print("{}:{}:{}".format(*tbl))
 
 
 @app.command("add-foreign-key")
